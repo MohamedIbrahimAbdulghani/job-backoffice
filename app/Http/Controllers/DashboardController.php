@@ -48,7 +48,7 @@ class DashboardController extends Controller
         // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
-        ->having('totalCountJobApplication', '>', 0)
+        ->havingRaw('(select count(*) from "job_applications" where "job_vacancies"."id" = "job_applications"."job_vacancy_id" and "job_applications"."deleted_at" is null) > 0')
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
@@ -99,7 +99,7 @@ class DashboardController extends Controller
         // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
-        ->having('totalCountJobApplication', '>', 0)
+        ->havingRaw('(select count(*) from "job_applications" where "job_vacancies"."id" = "job_applications"."job_vacancy_id" and "job_applications"."deleted_at" is null) > 0')
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
