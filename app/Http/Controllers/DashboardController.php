@@ -21,24 +21,34 @@ class DashboardController extends Controller
     }
 
     private function adminDashboard() {
+        // Last 30 days active users (job-seeker role)
         $activeUsers = User::where('role', 'job_seeker')
         ->where('last_login_at', '>=', Carbon::now()->subDays(30))
         ->count();
+        // $activeUsers = User::whereNotNull('last_login_at')
+        // ->where('last_login_at', '>=', now()->subDays(30))
+        // ->where('role', 'job_seeker')
+        // ->count();
 
-        $totalJobs = JobVacancy::whereNull('deleted_at')->count();
+        // Total Jobs ( not deleted )
+        $totalJobs = JobVacancy::whereNull('deleted_at')
+        ->count();
 
-        $totalApplications = JobApplication::whereNull('deleted_at')->count();
+        // Total Applications ( not deleted )
+        $totalApplications = JobApplication::whereNull('deleted_at')
+        ->count();
 
+        // Most Applied Jobs
         $mostAppliedJobs = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
         ->orderByDesc('totalCountJobApplication')
         ->limit(5)
         ->get();
 
+        // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
-        ->groupBy('job_vacancies.id')
-        ->havingRaw('(select count(*) from "job_applications" where "job_vacancies"."id" = "job_applications"."job_vacancy_id" and "job_applications"."deleted_at" is null) > 0')
+        ->having('totalCountJobApplication', '>', 0)
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
@@ -50,19 +60,21 @@ class DashboardController extends Controller
             }
             return $job;
         });
-
-        return [
+        $analytics = [
             'activeUsers' => $activeUsers,
             'totalJobs' => $totalJobs,
             'totalApplications' => $totalApplications,
             'mostAppliedJobs' => $mostAppliedJobs,
             'conversionJobRates' => $conversionJobRates,
         ];
+        return $analytics;
     }
 
     private function companyOwnerDashboard() {
+
         $company = Auth::user()->company;
 
+        // filter active users by applying to jobs of the company
         $activeUsers = User::whereNotNull('last_login_at')
         ->where('last_login_at', '>=', now()->subDays(30))
         ->where('role', 'job_seeker')
@@ -71,20 +83,23 @@ class DashboardController extends Controller
         })
         ->count();
 
+        // total jobs of the company
         $totalJobs = $company->Jobvacancy->count();
 
+        // total applications of the company
         $totalApplications = JobApplication::whereIn('job_vacancy_id', $company->Jobvacancy()->pluck('id'))->count();
 
+        // Most Applied Jobs
         $mostAppliedJobs = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
         ->orderByDesc('totalCountJobApplication')
         ->limit(5)
         ->get();
 
+        // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
-        ->groupBy('job_vacancies.id')
-        ->havingRaw('(select count(*) from "job_applications" where "job_vacancies"."id" = "job_applications"."job_vacancy_id" and "job_applications"."deleted_at" is null) > 0')
+        ->having('totalCountJobApplication', '>', 0)
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
@@ -97,12 +112,13 @@ class DashboardController extends Controller
             return $job;
         });
 
-        return [
+        $analytics = [
             'activeUsers' => $activeUsers,
             'totalJobs' => $totalJobs,
             'totalApplications' => $totalApplications,
             'mostAppliedJobs' => $mostAppliedJobs,
             'conversionJobRates' => $conversionJobRates,
         ];
+        return $analytics;
     }
 }
