@@ -31,7 +31,7 @@ class JobApplicationController extends Controller
         }
 
         $job_applications = $query->paginate(10)->onEachSide(1); // this is to get the last hob category will added it in database and make it paginate by one side or one button
-        return view('job_application.index', compact('job_applications'));
+        // return view('job_application.index', compact('job_applications'));
     }
 
     /**
