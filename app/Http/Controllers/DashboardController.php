@@ -21,28 +21,37 @@ class DashboardController extends Controller
     }
 
     private function adminDashboard() {
+        // Last 30 days active users (job-seeker role)
         $activeUsers = User::where('role', 'job_seeker')
         ->where('last_login_at', '>=', Carbon::now()->subDays(30))
         ->count();
+        // $activeUsers = User::whereNotNull('last_login_at')
+        // ->where('last_login_at', '>=', now()->subDays(30))
+        // ->where('role', 'job_seeker')
+        // ->count();
 
+        // Total Jobs ( not deleted )
         $totalJobs = JobVacancy::whereNull('deleted_at')
         ->count();
 
+        // Total Applications ( not deleted )
         $totalApplications = JobApplication::whereNull('deleted_at')
         ->count();
 
-        $mostAppliedJobs = JobVacancy::withCount('jobApplications as totalCountJobApplication')
+        // Most Applied Jobs
+        $mostAppliedJobs = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
         ->orderByDesc('totalCountJobApplication')
         ->limit(5)
         ->get();
 
-        $conversionJobRates = JobVacancy::withCount('jobApplications as totalCountJobApplication')
+        // Top Converting Job Posts
+        $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
+        ->having('totalCountJobApplication', '>', 0)
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
-        ->filter(fn($job) => $job->totalCountJobApplication > 0)
         ->map(function($job) {
             if($job->view_count > 0) {
                 $job->conversionRate = round(( $job->totalCountJobApplication / $job->view_count ) * 100 , 2);
@@ -51,7 +60,6 @@ class DashboardController extends Controller
             }
             return $job;
         });
-
         $analytics = [
             'activeUsers' => $activeUsers,
             'totalJobs' => $totalJobs,
@@ -66,30 +74,35 @@ class DashboardController extends Controller
 
         $company = Auth::user()->company;
 
+        // filter active users by applying to jobs of the company
         $activeUsers = User::whereNotNull('last_login_at')
         ->where('last_login_at', '>=', now()->subDays(30))
         ->where('role', 'job_seeker')
-        ->whereHas('jobApplications', function($query) use ($company) {
+        ->whereHas('jobapplications', function($query) use ($company) {
             $query->whereIn('job_vacancy_id', $company->Jobvacancy()->pluck('id'));
         })
         ->count();
 
+        // total jobs of the company
         $totalJobs = $company->Jobvacancy->count();
 
+        // total applications of the company
         $totalApplications = JobApplication::whereIn('job_vacancy_id', $company->Jobvacancy()->pluck('id'))->count();
 
-        $mostAppliedJobs = JobVacancy::withCount('jobApplications as totalCountJobApplication')
+        // Most Applied Jobs
+        $mostAppliedJobs = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
         ->orderByDesc('totalCountJobApplication')
         ->limit(5)
         ->get();
 
-        $conversionJobRates = JobVacancy::withCount('jobApplications as totalCountJobApplication')
+        // Top Converting Job Posts
+        $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
+        ->having('totalCountJobApplication', '>', 0)
         ->limit(5)
         ->orderByDesc('totalCountJobApplication')
         ->get()
-        ->filter(fn($job) => $job->totalCountJobApplication > 0)
         ->map(function($job) {
             if($job->view_count > 0) {
                 $job->conversionRate = round(( $job->totalCountJobApplication / $job->view_count ) * 100 , 2);
