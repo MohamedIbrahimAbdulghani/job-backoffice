@@ -48,10 +48,10 @@ class DashboardController extends Controller
         // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereNull('deleted_at')
-        ->having('totalCountJobApplication', '>', 0)
-        ->limit(5)
         ->orderByDesc('totalCountJobApplication')
+        ->limit(5)
         ->get()
+        ->filter(fn($job) => $job->totalCountJobApplication > 0)
         ->map(function($job) {
             if($job->view_count > 0) {
                 $job->conversionRate = round(( $job->totalCountJobApplication / $job->view_count ) * 100 , 2);
@@ -99,10 +99,10 @@ class DashboardController extends Controller
         // Top Converting Job Posts
         $conversionJobRates = JobVacancy::withCount('jobapplications as totalCountJobApplication')
         ->whereIn('id', $company->Jobvacancy()->pluck('id'))
-        ->having('totalCountJobApplication', '>', 0)
-        ->limit(5)
         ->orderByDesc('totalCountJobApplication')
+        ->limit(5)
         ->get()
+        ->filter(fn($job) => $job->totalCountJobApplication > 0)
         ->map(function($job) {
             if($job->view_count > 0) {
                 $job->conversionRate = round(( $job->totalCountJobApplication / $job->view_count ) * 100 , 2);
